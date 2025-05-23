@@ -1,0 +1,139 @@
+{% extends "layout.html" %}
+
+{% block title %}Extract Patterns{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h1 class="mb-4">Extract Patterns</h1>
+    
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">Pattern Extraction Configuration</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" class="needs-validation" novalidate>
+                        <div class="mb-3">
+                            <label for="filename" class="form-label">
+                                Select Processed Data File
+                                <i class="bi bi-question-circle-fill text-primary" 
+                                   data-bs-toggle="tooltip" 
+                                   title="Choose the preprocessed forex data file that contains OHLC data for pattern extraction"></i>
+                            </label>
+                            <select class="form-select" id="filename" name="filename" required>
+                                <option value="" selected disabled>Choose a file...</option>
+                                {% for file in processed_files %}
+                                <option value="{{ file }}" {% if request.args.get('filename') == file %}selected{% endif %}>{{ file }}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="invalid-feedback">Please select a data file.</div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="window_size" class="form-label">
+                                    Window Size
+                                    <i class="bi bi-question-circle-fill text-primary" 
+                                       data-bs-toggle="tooltip" 
+                                       title="Number of consecutive candlesticks to include in each pattern. Larger windows capture more complex formations but require more data."></i>
+                                </label>
+                                <input type="number" class="form-control" id="window_size" name="window_size" value="10" min="5" max="100" required>
+                                <div class="form-text">Number of candlesticks in each pattern window</div>
+                                <div class="invalid-feedback">Please enter a valid window size (5-100).</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="step_size" class="form-label">
+                                    Step Size
+                                    <i class="bi bi-question-circle-fill text-primary" 
+                                       data-bs-toggle="tooltip" 
+                                       title="Number of candlesticks to advance when creating the next pattern window. Smaller values create more overlapping patterns."></i>
+                                </label>
+                                <input type="number" class="form-control" id="step_size" name="step_size" value="1" min="1" max="10" required>
+                                <div class="form-text">Number of candlesticks to slide window forward</div>
+                                <div class="invalid-feedback">Please enter a valid step size (1-10).</div>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="n_clusters" class="form-label">
+                                    Number of Clusters
+                                    <i class="bi bi-question-circle-fill text-primary" 
+                                       data-bs-toggle="tooltip" 
+                                       title="Maximum number of distinct pattern groups to identify. Higher values find more specific patterns, lower values find more general patterns."></i>
+                                </label>
+                                <input type="number" class="form-control" id="n_clusters" name="n_clusters" value="20" min="5" max="100" required>
+                                <div class="form-text">Number of pattern clusters to identify</div>
+                                <div class="invalid-feedback">Please enter a valid number of clusters (5-100).</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="distance_threshold" class="form-label">
+                                    Distance Threshold
+                                    <i class="bi bi-question-circle-fill text-primary" 
+                                       data-bs-toggle="tooltip" 
+                                       title="Threshold for determining pattern similarity. Lower values require patterns to be more similar to be grouped together."></i>
+                                </label>
+                                <input type="number" class="form-control" id="distance_threshold" name="distance_threshold" value="0.5" min="0.1" max="2.0" step="0.1" required>
+                                <div class="form-text">Threshold for pattern similarity (lower = more similar)</div>
+                                <div class="invalid-feedback">Please enter a valid distance threshold (0.1-2.0).</div>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="grid_size" class="form-label">
+                                    Grid Size
+                                    <i class="bi bi-question-circle-fill text-primary" 
+                                       data-bs-toggle="tooltip" 
+                                       title="Dimensions of the Template Grid used to represent patterns. Higher values capture more detail but increase computational complexity."></i>
+                                </label>
+                                <input type="number" class="form-control" id="grid_size" name="grid_size" value="10" min="5" max="20" required>
+                                <div class="form-text">Size of Template Grid for pattern representation</div>
+                                <div class="invalid-feedback">Please enter a valid grid size (5-20).</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="max_windows" class="form-label">
+                                    Max Windows
+                                    <i class="bi bi-question-circle-fill text-primary" 
+                                       data-bs-toggle="tooltip" 
+                                       title="Maximum number of pattern windows to process. Higher values provide more comprehensive results but increase processing time."></i>
+                                </label>
+                                <input type="number" class="form-control" id="max_windows" name="max_windows" value="5000" min="1000" max="50000" required>
+                                <div class="form-text">Maximum number of windows to process (for web performance)</div>
+                                <div class="invalid-feedback">Please enter a valid max windows value (1000-50000).</div>
+                            </div>
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i> Pattern extraction may take several minutes depending on data size and parameters.
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-search"></i> Extract Patterns
+                            </button>
+                            <a href="{{ url_for('patterns.index') }}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left"></i> Back to Pattern Management
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+    // Initialize tooltips
+    document.addEventListener('DOMContentLoaded', function() {
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    });
+</script>
+{% endblock %}
+
+{% endblock %}

@@ -1,0 +1,52 @@
+{% extends "layout.html" %}
+
+{% block title %}Upload Data{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h1 class="mb-4">Upload Data</h1>
+    
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">Upload Forex Data File</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <label for="file" class="form-label">Select CSV File</label>
+                            <input type="file" class="form-control" id="file" name="file" accept=".csv,.txt" required>
+                            <div class="form-text">Supported formats: CSV, TXT</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Expected Data Format</label>
+                            <div class="alert alert-info">
+                                <p class="mb-1">The file should contain the following columns:</p>
+                                <ul class="mb-0">
+                                    <li>Date/Time (timestamp)</li>
+                                    <li>Open price</li>
+                                    <li>High price</li>
+                                    <li>Low price</li>
+                                    <li>Close price</li>
+                                    <li>Volume (optional)</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-upload"></i> Upload File
+                            </button>
+                            <a href="{{ url_for('data.index') }}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left"></i> Back to Data Management
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

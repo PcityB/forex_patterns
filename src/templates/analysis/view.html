@@ -1,0 +1,171 @@
+{% extends "layout.html" %}
+
+{% block title %}Analysis Results{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h1 class="mb-4">Analysis Results: {{ timeframe }}</h1>
+    
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">Analysis Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <p><strong>Timeframe:</strong> {{ timeframe }}</p>
+                        </div>
+                        <div class="col-md-4">
+                            <p><strong>Number of Clusters:</strong> {{ analysis_data.n_clusters }}</p>
+                        </div>
+                        <div class="col-md-4">
+                            <p><strong>Lookahead Periods:</strong> {{ analysis_data.lookahead_periods }}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex gap-2">
+                        <a href="{{ url_for('visualization.visualize_analysis', filename=timeframe + '_analysis.json') }}" class="btn btn-primary">
+                            <i class="bi bi-bar-chart"></i> Interactive Visualization
+                        </a>
+                        <a href="{{ url_for('analysis.index') }}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Back to Analysis Dashboard
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Profitability Summary</h5>
+                </div>
+                <div class="card-body">
+                    {% if analysis_data.profitability %}
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="metric-card">
+                                    <div class="metric-value">{{ (analysis_data.profitability.avg_return * 100) | round(2) }}%</div>
+                                    <div class="metric-label">Average Return</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="metric-card">
+                                    <div class="metric-value">{{ analysis_data.profitability.profitable_patterns }}</div>
+                                    <div class="metric-label">Profitable Patterns</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <div class="metric-card">
+                                    <div class="metric-value">{{ (analysis_data.profitability.win_rate * 100) | round(2) }}%</div>
+                                    <div class="metric-label">Win Rate</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="metric-card">
+                                    <div class="metric-value">{{ analysis_data.profitability.profit_factor | round(2) }}</div>
+                                    <div class="metric-label">Profit Factor</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        {% if viz_urls.profitability %}
+                            <div class="mt-4">
+                                <img src="{{ viz_urls.profitability }}" class="img-fluid" alt="Cluster Profitability">
+                            </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="alert alert-info">
+                            No profitability data available.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Statistical Significance</h5>
+                </div>
+                <div class="card-body">
+                    {% if analysis_data.statistical_significance %}
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Cluster ID</th>
+                                        <th>P-Value</th>
+                                        <th>Significant</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for cluster_id, stats in analysis_data.statistical_significance.items() %}
+                                    <tr>
+                                        <td>{{ cluster_id }}</td>
+                                        <td>{{ stats.p_value | round(4) }}</td>
+                                        <td>
+                                            {% if stats.p_value < 0.05 %}
+                                                <span class="badge bg-success">Yes</span>
+                                            {% else %}
+                                                <span class="badge bg-danger">No</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            No statistical significance data available.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Pattern Visualizations</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% if viz_urls.pca_clusters %}
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header">PCA Cluster Visualization</div>
+                                    <div class="card-body">
+                                        <img src="{{ viz_urls.pca_clusters }}" class="img-fluid" alt="PCA Clusters">
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+                        
+                        {% if viz_urls.feature_importance %}
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header">Feature Importance</div>
+                                    <div class="card-body">
+                                        <img src="{{ viz_urls.feature_importance }}" class="img-fluid" alt="Feature Importance">
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

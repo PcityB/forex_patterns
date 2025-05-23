@@ -1,0 +1,148 @@
+# Comparison of extract_patterns method in src/pattern_extraction.py and forex_pattern_framework/src/pattern_extraction.py
+
+## src/pattern_extraction.py extract_patterns method:
+
+def extract_patterns(self, timeframe, window_size=5, stride=1, max_windows=10000, 
+                    grid_rows=10, grid_cols=10, n_clusters=None):
+    """
+    Extract patterns from a specific timeframe.
+    """
+    # Load data if not already loaded
+    if timeframe not in self.processed_data:
+        self.load_data(timeframe)
+        
+    if timeframe not in self.processed_data:
+        logger.error(f"Failed to load data for {timeframe} timeframe")
+        return None, None
+        
+    logger.info(f"Extracting patterns from {timeframe} timeframe")
+    
+    # Extract windows
+    windows, timestamps = self.extract_candlestick_windows(
+        timeframe, window_size=window_size, stride=stride, max_windows=max_windows
+    )
+    
+    if not windows:
+        logger.error(f"No windows extracted from {timeframe} timeframe")
+        return None, None
+        
+    # Create Template Grids and PICs
+    grids, pics = self.create_template_grids(windows, timestamps, grid_rows=grid_rows, grid_cols=grid_cols)
+    
+    # Calculate distance matrix using DTW
+    distance_matrix = self.calculate_dtw_distance_matrix(windows)
+    
+    # Calculate similarity matrix based on PICs
+    similarity_matrix = self.calculate_pic_similarity_matrix(pics)
+    
+    # Convert similarity to distance
+    pic_distance_matrix = 1 - similarity_matrix
+    
+    # Combine distance matrices (equal weight)
+    combined_distance_matrix = (distance_matrix + pic_distance_matrix) / 2
+    
+    # Cluster patterns
+    if n_clusters is None:
+        # Estimate optimal number of clusters
+        n_clusters = max(5, int(np.sqrt(len(windows) / 5)))
+        
+    cluster_labels = self.cluster_patterns(combined_distance_matrix, n_clusters=n_clusters)
+    
+    # Extract representative patterns
+    representatives = self.extract_representative_patterns(
+        windows, timestamps, cluster_labels, combined_distance_matrix
+    )
+    
+    # Visualize representative patterns
+    visualization_files = self.visualize_representative_patterns(
+        timeframe, representatives, grid_rows=grid_rows, grid_cols=grid_cols
+    )
+    
+    # Save patterns
+    patterns_file = self.save_patterns(timeframe, windows, timestamps, cluster_labels, representatives)
+    
+    # Store patterns data
+    self.patterns[timeframe] = {
+        'windows': windows,
+        'timestamps': timestamps,
+        'cluster_labels': cluster_labels,
+        'representatives': representatives
+    }
+    
+    logger.info(f"Pattern extraction complete for {timeframe} timeframe")
+    
+    return patterns_file, visualization_files
+
+
+## forex_pattern_framework/src/pattern_extraction.py extract_patterns method:
+
+def extract_patterns(self, timeframe, window_size=5, stride=1, max_windows=10000, 
+                    grid_rows=10, grid_cols=10, n_clusters=None):
+    """
+    Extract patterns from a specific timeframe.
+    """
+    # Load data if not already loaded
+    if timeframe not in self.processed_data:
+        self.load_data(timeframe)
+        
+    if timeframe not in self.processed_data:
+        logger.error(f"Failed to load data for {timeframe} timeframe")
+        return None, None
+        
+    logger.info(f"Extracting patterns from {timeframe} timeframe")
+    
+    # Extract windows
+    windows, timestamps = self.extract_candlestick_windows(
+        timeframe, window_size=window_size, stride=stride, max_windows=max_windows
+    )
+    
+    if not windows:
+        logger.error(f"No windows extracted from {timeframe} timeframe")
+        return None, None
+        
+    # Create Template Grids and PICs
+    grids, pics = self.create_template_grids(windows, timestamps, grid_rows=grid_rows, grid_cols=grid_cols)
+    
+    # Calculate distance matrix using DTW
+    distance_matrix = self.calculate_dtw_distance_matrix(windows)
+    
+    # Calculate similarity matrix based on PICs
+    similarity_matrix = self.calculate_pic_similarity_matrix(pics)
+    
+    # Convert similarity to distance
+    pic_distance_matrix = 1 - similarity_matrix
+    
+    # Combine distance matrices (equal weight)
+    combined_distance_matrix = (distance_matrix + pic_distance_matrix) / 2
+    
+    # Cluster patterns
+    if n_clusters is None:
+        # Estimate optimal number of clusters
+        n_clusters = max(5, int(np.sqrt(len(windows) / 5)))
+        
+    cluster_labels = self.cluster_patterns(combined_distance_matrix, n_clusters=n_clusters)
+    
+    # Extract representative patterns
+    representatives = self.extract_representative_patterns(
+        windows, timestamps, cluster_labels, combined_distance_matrix
+    )
+    
+    # Visualize representative patterns
+    visualization_files = self.visualize_representative_patterns(
+        timeframe, representatives, grid_rows=grid_rows, grid_cols=grid_cols
+    )
+    
+    # Save patterns
+    patterns_file = self.save_patterns(timeframe, windows, timestamps, cluster_labels, representatives)
+    
+    # Store patterns data
+    self.patterns[timeframe] = {
+        'windows': windows,
+        'timestamps': timestamps,
+        'cluster_labels': cluster_labels,
+        'representatives': representatives
+    }
+    
+    logger.info(f"Pattern extraction complete for {timeframe} timeframe")
+    
+    return patterns_file, visualization_files

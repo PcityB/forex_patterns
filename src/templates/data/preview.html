@@ -1,0 +1,65 @@
+{% extends "layout.html" %}
+
+{% block title %}Preview Data{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h1 class="mb-4">Data Preview: {{ filename }}</h1>
+    
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">File Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <p><strong>Filename:</strong> {{ filename }}</p>
+                        </div>
+                        <div class="col-md-4">
+                            <p><strong>File Size:</strong> {{ file_size }}</p>
+                        </div>
+                        <div class="col-md-4">
+                            <p><strong>Row Count:</strong> {{ row_count }}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h6>Columns:</h6>
+                        <div class="d-flex flex-wrap gap-2">
+                            {% for column in columns %}
+                            <span class="badge bg-secondary">{{ column }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex gap-2">
+                        <a href="{{ url_for('data.preprocess_data') }}?filename={{ filename }}" class="btn btn-success">
+                            <i class="bi bi-gear"></i> Preprocess This File
+                        </a>
+                        <a href="{{ url_for('data.index') }}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Back to Data Management
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Data Preview (First 20 Rows)</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        {{ table_html|safe }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

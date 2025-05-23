@@ -1,0 +1,389 @@
+{% extends "layout.html" %}
+
+{% block title %}Backtest Patterns{% endblock %}
+
+{% block extra_css %}
+<style>
+    .backtest-container {
+        width: 100%;
+        height: 600px;
+        margin-bottom: 2rem;
+        border: 1px solid #dee2e6;
+        border-radius: 0.25rem;
+    }
+    
+    .strategy-card {
+        margin-bottom: 1.5rem;
+        transition: transform 0.3s;
+    }
+    
+    .strategy-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    }
+    
+    .performance-metric {
+        text-align: center;
+        padding: 1rem;
+        border-radius: 0.25rem;
+        margin-bottom: 1rem;
+    }
+    
+    .metric-value {
+        font-size: 1.8rem;
+        font-weight: bold;
+    }
+    
+    .metric-label {
+        font-size: 0.9rem;
+        color: #6c757d;
+    }
+    
+    .positive-value {
+        color: #198754;
+    }
+    
+    .negative-value {
+        color: #dc3545;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <h1 class="mb-4">Backtest Pattern Trading Strategies: {{ timeframe }}</h1>
+    
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">Backtest Configuration</h5>
+                </div>
+                <div class="card-body">
+                    <form id="backtestForm" class="needs-validation" novalidate>
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label for="initialCapital" class="form-label">Initial Capital</label>
+                                    <input type="number" class="form-control" id="initialCapital" value="10000" min="1000" required>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label for="positionSize" class="form-label">Position Size (%)</label>
+                                    <input type="number" class="form-control" id="positionSize" value="2" min="0.1" max="100" step="0.1" required>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label for="stopLoss" class="form-label">Stop Loss (%)</label>
+                                    <input type="number" class="form-control" id="stopLoss" value="1" min="0.1" max="10" step="0.1" required>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label for="takeProfit" class="form-label">Take Profit (%)</label>
+                                    <input type="number" class="form-control" id="takeProfit" value="2" min="0.1" max="20" step="0.1" required>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="spreadPips" class="form-label">Spread (pips)</label>
+                                    <input type="number" class="form-control" id="spreadPips" value="2" min="0" step="0.1" required>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="slippagePips" class="form-label">Slippage (pips)</label>
+                                    <input type="number" class="form-control" id="slippagePips" value="1" min="0" step="0.1" required>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="commissionPct" class="form-label">Commission (%)</label>
+                                    <input type="number" class="form-control" id="commissionPct" value="0.01" min="0" step="0.01" required>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="mb-3">
+                                    <label class="form-label">Select Profitable Clusters to Trade</label>
+                                    <div class="cluster-selection">
+                                        {% for cluster_id, data in analysis_data.cluster_returns.items() %}
+                                            <div class="form-check form-check-inline">
+                                                <input class="form-check-input" type="checkbox" id="cluster{{ cluster_id }}" value="{{ cluster_id }}" 
+                                                       {% if data.avg_return > 0 and data.p_value < 0.05 %}checked{% endif %}>
+                                                <label class="form-check-label" for="cluster{{ cluster_id }}">
+                                                    Cluster {{ cluster_id }} 
+                                                    <span class="{% if data.avg_return > 0 %}text-success{% else %}text-danger{% endif %}">
+                                                        ({{ (data.avg_return * 100) | round(2) }}%)
+                                                    </span>
+                                                </label>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-warning">
+                                <i class="bi bi-currency-exchange"></i> Run Backtest
+                            </button>
+                            <a href="{{ url_for('visualization.index') }}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left"></i> Back to Visualization Dashboard
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row" id="backtestResults" style="display: none;">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="card-title mb-0">Backtest Results</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <div class="performance-metric bg-light">
+                                <div class="metric-value" id="totalReturn">--</div>
+                                <div class="metric-label">Total Return (%)</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="performance-metric bg-light">
+                                <div class="metric-value" id="sharpeRatio">--</div>
+                                <div class="metric-label">Sharpe Ratio</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="performance-metric bg-light">
+                                <div class="metric-value" id="maxDrawdown">--</div>
+                                <div class="metric-label">Max Drawdown (%)</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="performance-metric bg-light">
+                                <div class="metric-value" id="winRate">--</div>
+                                <div class="metric-label">Win Rate (%)</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="backtest-container">
+                        <canvas id="equityCurveChart"></canvas>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">Trade Statistics</div>
+                                <div class="card-body">
+                                    <table class="table table-striped">
+                                        <tbody>
+                                            <tr>
+                                                <td>Total Trades</td>
+                                                <td id="totalTrades">--</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Winning Trades</td>
+                                                <td id="winningTrades">--</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Losing Trades</td>
+                                                <td id="losingTrades">--</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Average Win</td>
+                                                <td id="avgWin">--</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Average Loss</td>
+                                                <td id="avgLoss">--</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Profit Factor</td>
+                                                <td id="profitFactor">--</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">Monthly Returns</div>
+                                <div class="card-body">
+                                    <canvas id="monthlyReturnsChart" height="250"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Handle backtest form submission
+        const backtestForm = document.getElementById('backtestForm');
+        backtestForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+            
+            if (!backtestForm.checkValidity()) {
+                event.stopPropagation();
+                backtestForm.classList.add('was-validated');
+                return;
+            }
+            
+            // Show loading indicator
+            document.getElementById('backtestResults').style.display = 'none';
+            
+            // In a real application, this would make an AJAX call to the backend
+            // For this demo, we'll simulate a backtest with mock data
+            setTimeout(function() {
+                displayBacktestResults();
+            }, 1500);
+        });
+        
+        function displayBacktestResults() {
+            // Show results section
+            document.getElementById('backtestResults').style.display = 'block';
+            
+            // Populate metrics with mock data
+            document.getElementById('totalReturn').textContent = '+27.8%';
+            document.getElementById('totalReturn').classList.add('positive-value');
+            
+            document.getElementById('sharpeRatio').textContent = '1.85';
+            document.getElementById('maxDrawdown').textContent = '-12.4%';
+            document.getElementById('winRate').textContent = '58.3%';
+            
+            document.getElementById('totalTrades').textContent = '127';
+            document.getElementById('winningTrades').textContent = '74';
+            document.getElementById('losingTrades').textContent = '53';
+            document.getElementById('avgWin').textContent = '+1.2%';
+            document.getElementById('avgLoss').textContent = '-0.8%';
+            document.getElementById('profitFactor').textContent = '2.14';
+            
+            // Create equity curve chart
+            const equityCtx = document.getElementById('equityCurveChart').getContext('2d');
+            
+            // Generate mock equity curve data
+            const labels = [];
+            const equityData = [];
+            let equity = 10000;
+            
+            for (let i = 0; i < 180; i++) {
+                const date = new Date(2023, 0, i + 1);
+                labels.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+                
+                // Simulate some randomness in the equity curve
+                const dailyReturn = (Math.random() * 2 - 0.8) / 100;
+                equity = equity * (1 + dailyReturn);
+                equityData.push(equity);
+            }
+            
+            new Chart(equityCtx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Account Equity',
+                        data: equityData,
+                        borderColor: 'rgba(13, 110, 253, 1)',
+                        backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Equity Curve'
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            callbacks: {
+                                label: function(context) {
+                                    return 'Equity: $' + context.raw.toFixed(2);
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                maxTicksLimit: 12
+                            }
+                        },
+                        y: {
+                            beginAtZero: false
+                        }
+                    }
+                }
+            });
+            
+            // Create monthly returns chart
+            const monthlyCtx = document.getElementById('monthlyReturnsChart').getContext('2d');
+            
+            // Generate mock monthly return data
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+            const monthlyReturns = [3.2, -1.8, 5.4, 2.1, -0.7, 4.5];
+            const backgroundColors = monthlyReturns.map(value => 
+                value >= 0 ? 'rgba(40, 167, 69, 0.7)' : 'rgba(220, 53, 69, 0.7)'
+            );
+            
+            new Chart(monthlyCtx, {
+                type: 'bar',
+                data: {
+                    labels: months,
+                    datasets: [{
+                        label: 'Monthly Return (%)',
+                        data: monthlyReturns,
+                        backgroundColor: backgroundColors,
+                        borderColor: backgroundColors.map(color => color.replace('0.7', '1')),
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Monthly Returns (%)'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+            
+            // Scroll to results
+            document.getElementById('backtestResults').scrollIntoView({ behavior: 'smooth' });
+        }
+    });
+</script>
+{% endblock %}

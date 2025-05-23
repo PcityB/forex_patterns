@@ -1,0 +1,52 @@
+# Python virtual environment
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Flask instance folder
+instance/
+
+# Environment variables
+.env
+.flaskenv
+
+# Data directories
+data/raw/*
+data/processed/*
+data/patterns/data/*
+data/patterns/visualizations/*
+data/analysis/data/*
+data/analysis/visualizations/*
+data/visualizations/*
+
+# Keep .gitkeep files
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!data/patterns/data/.gitkeep
+!data/patterns/visualizations/.gitkeep
+!data/analysis/data/.gitkeep
+!data/analysis/visualizations/.gitkeep
+!data/visualizations/.gitkeep
+
+# Static files generated during runtime
+src/static/visualization/*
+!src/static/visualization/.gitkeep
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Log files
+*.log

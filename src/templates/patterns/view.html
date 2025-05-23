@@ -1,0 +1,105 @@
+{% extends "layout.html" %}
+
+{% block title %}View Patterns{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h1 class="mb-4">Pattern Visualization: {{ timeframe }}</h1>
+    
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">Pattern Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <p><strong>Timeframe:</strong> {{ timeframe }}</p>
+                        </div>
+                        <div class="col-md-4">
+                            <p><strong>Number of Clusters:</strong> {{ pattern_data.n_clusters }}</p>
+                        </div>
+                        <div class="col-md-4">
+                            <p><strong>Total Patterns:</strong> {{ pattern_data.total_patterns }}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex gap-2">
+                        <a href="{{ url_for('analysis.analyze_patterns', filename=timeframe + '_patterns.json') }}" class="btn btn-success">
+                            <i class="bi bi-graph-up"></i> Analyze These Patterns
+                        </a>
+                        <a href="{{ url_for('patterns.index') }}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Back to Pattern Management
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Representative Patterns</h5>
+                </div>
+                <div class="card-body">
+                    {% if viz_urls %}
+                        <div class="pattern-grid">
+                            {% for viz_url in viz_urls %}
+                                <div class="pattern-card">
+                                    <img src="{{ viz_url }}" class="pattern-image" alt="Pattern visualization">
+                                    <p class="text-center">Pattern {{ loop.index }}</p>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            No pattern visualizations available.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Cluster Distribution</h5>
+                </div>
+                <div class="card-body">
+                    {% if pattern_data.cluster_counts %}
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Cluster ID</th>
+                                        <th>Pattern Count</th>
+                                        <th>Percentage</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for cluster_id, count in pattern_data.cluster_counts.items() %}
+                                    <tr>
+                                        <td>{{ cluster_id }}</td>
+                                        <td>{{ count }}</td>
+                                        <td>{{ (count / pattern_data.total_patterns * 100) | round(2) }}%</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            No cluster distribution data available.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
