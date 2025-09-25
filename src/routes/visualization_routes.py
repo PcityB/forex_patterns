@@ -12,6 +12,17 @@ import plotly.graph_objects as go
 import plotly.io as pio
 from plotly.subplots import make_subplots
 
+def restore_json_infinity(obj):
+    """Convert JSON 'inf' and '-inf' strings back to float infinity"""
+    if isinstance(obj, dict):
+        return {k: restore_json_infinity(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [restore_json_infinity(i) for i in obj]
+    elif obj == "inf":
+        return float('inf')
+    elif obj == "-inf":
+        return -float('inf')
+    return obj
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -43,7 +54,7 @@ def visualize_analysis(filename):
             return redirect(url_for('visualization.index'))
         
         with open(file_path, 'r') as f:
-            analysis_data = json.load(f)
+            analysis_data = restore_json_infinity(json.load(f))
         
         # Get timeframe from filename
         timeframe = filename.replace('_analysis.json', '')
@@ -185,7 +196,7 @@ def backtest_patterns(filename):
         
         # Load analysis data
         with open(analysis_file, 'r') as f:
-            analysis_data = json.load(f)
+            analysis_data = restore_json_infinity(json.load(f))
         
         return render_template('visualization/backtest.html',
                               timeframe=timeframe,
