@@ -17,6 +17,7 @@ import json
 from datetime import datetime
 import pickle
 from tqdm import tqdm
+from flask import current_app
 
 # Configure logging
 logging.basicConfig(
@@ -457,12 +458,12 @@ class PatternExtractor:
         Returns:
             str: Path to saved patterns file
         """
-        atterns_dir = os.path.dirname(os.path.dirname(os.path.join(current_app.config['PATTERNS_FOLDER'], 'data')))
+        patterns_dir = os.path.join(current_app.config['PATTERNS_FOLDER'], 'data')
         os.makedirs(patterns_dir, exist_ok=True)
-        
+
         # Convert timestamps to strings for JSON serialization
         timestamps_str = [ts.strftime('%Y-%m-%d %H:%M:%S') for ts in timestamps]
-        
+
         # Create serializable representatives dictionary
         serializable_representatives = {}
         for label, rep_data in representatives.items():
@@ -472,7 +473,7 @@ class PatternExtractor:
                 'index': int(rep_data['index']),
                 'count': int(rep_data['count'])
             }
-        
+
         # Create patterns dictionary
         patterns_data = {
             'timeframe': timeframe,
@@ -483,19 +484,19 @@ class PatternExtractor:
             'representatives': serializable_representatives,
             'unique_clusters': int(len(np.unique(cluster_labels)))
         }
-        
+
         # Save patterns data
         patterns_file = os.path.join(patterns_dir, f"{timeframe}_patterns.json")
         with open(patterns_file, 'w') as f:
             json.dump(patterns_data, f, indent=2)
-            
+
         # Save full pattern data (windows and timestamps) as pickle
         full_data = {
             'windows': windows,
             'timestamps': timestamps,
             'cluster_labels': cluster_labels
         }
-        
+
         pickle_file = os.path.join(patterns_dir, f"{timeframe}_full_patterns.pkl")
         with open(pickle_file, 'wb') as f:
             pickle.dump(full_data, f)
