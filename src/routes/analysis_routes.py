@@ -51,7 +51,8 @@ def analyze_patterns(filename):
             from pattern_analysis import PatternAnalyzer
             
             # Setup paths
-            patterns_dir = os.path.dirname(os.path.dirname(os.path.join(current_app.config['PATTERNS_FOLDER'], 'data')))
+            patterns_dir = current_app.config['PATTERNS_FOLDER']
+            logger.error(patterns_dir)
             data_dir = current_app.config['PROCESSED_FOLDER']
             output_dir = current_app.config['ANALYSIS_FOLDER']
             

@@ -17,6 +17,7 @@ import json
 import pickle
 import logging
 from datetime import datetime, timedelta
+from tqdm import tqdm
 
 # Configure logging
 logging.basicConfig(
@@ -37,9 +38,16 @@ def make_json_serializable(obj):
     elif isinstance(obj, (np.integer, np.int_, np.intc, np.intp, np.int8, np.int16, np.int32, np.int64)):
         return int(obj)
     elif isinstance(obj, (np.floating, np.float_, np.float16, np.float32, np.float64)):
-        return float(obj)
+        val = float(obj)
+        if np.isinf(val):
+            return "inf" if val > 0 else "-inf"
+        return val
     elif isinstance(obj, np.bool_):
         return bool(obj)
+    elif isinstance(obj, float):
+        if np.isinf(obj):
+            return "inf" if obj > 0 else "-inf"
+        return obj
     else:
         return obj
 
@@ -149,20 +157,24 @@ class PatternAnalyzer:
         
         # Extract features from each window
         features = []
-        for window in windows:
+        for window in tqdm(windows, desc=f"Extracting features from {timeframe} patterns"):
             # Basic statistical features
             open_prices = window[:, 0]
             high_prices = window[:, 1]
             low_prices = window[:, 2]
             close_prices = window[:, 3]
             
-            # Calculate returns
-            returns = np.diff(close_prices) / close_prices[:-1]
+            # Calculate returns (avoid division by zero)
+            if np.any(close_prices[:-1] == 0):
+                # If any close price is zero, use simple diff instead
+                returns = np.diff(close_prices)
+            else:
+                returns = np.diff(close_prices) / close_prices[:-1]
             
             # Calculate features
             window_features = [
                 # Price movement
-                (close_prices[-1] - close_prices[0]) / close_prices[0],  # Overall return
+                (close_prices[-1] - close_prices[0]) / close_prices[0] if close_prices[0] != 0 else 0,  # Overall return
                 np.mean(returns),  # Mean return
                 np.std(returns),   # Volatility
                 np.max(returns),   # Max return
@@ -190,6 +202,11 @@ class PatternAnalyzer:
             
         X = np.array(features)
         y = np.array(cluster_labels)
+        
+        # Handle NaN and infinite values
+        if np.any(np.isnan(X)) or np.any(np.isinf(X)):
+            logger.warning(f"Found {np.sum(np.isnan(X))} NaN and {np.sum(np.isinf(X))} infinite values in features, replacing with 0")
+            X = np.nan_to_num(X, nan=0.0, posinf=0.0, neginf=0.0)
         
         logger.info(f"Extracted {X.shape[1]} features from {X.shape[0]} patterns")
         
@@ -344,7 +361,7 @@ class PatternAnalyzer:
         future_returns = []
         valid_indices = []
         
-        for i, ts in enumerate(timestamps):
+        for i, ts in tqdm(enumerate(timestamps), desc=f"Calculating future returns for {timeframe}"):
             # Convert timestamp string to datetime if needed
             if isinstance(ts, str):
                 ts = pd.to_datetime(ts)
@@ -419,7 +436,7 @@ class PatternAnalyzer:
         Compare profitability between different pattern clusters.
         
         Args:
-            timeframe (str): Timeframe being analyzed
+            timeframe (str): Timeframe to analyze
             profitability (dict): Profitability metrics by cluster
             
         Returns:

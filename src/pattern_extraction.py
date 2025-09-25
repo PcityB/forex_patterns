@@ -16,6 +16,7 @@ import logging
 import json
 from datetime import datetime
 import pickle
+from tqdm import tqdm
 
 # Configure logging
 logging.basicConfig(
@@ -101,22 +102,23 @@ class TemplateGrid:
         """
         fig, ax = plt.subplots(figsize=(10, 6))
         ax.imshow(self.grid, cmap='Blues', interpolation='nearest')
-        
+
         # Add grid lines
         ax.set_xticks(np.arange(-0.5, self.cols, 1), minor=True)
         ax.set_yticks(np.arange(-0.5, self.rows, 1), minor=True)
         ax.grid(which='minor', color='gray', linestyle='-', linewidth=0.5)
-        
+
         # Remove ticks
         ax.set_xticks([])
         ax.set_yticks([])
-        
+
         if title:
             ax.set_title(title)
-            
+
         if save_path:
             plt.savefig(save_path, bbox_inches='tight')
-            
+            plt.close(fig)
+
         return fig
 
 
@@ -188,7 +190,7 @@ class PatternExtractor:
         windows = []
         timestamps = []
         
-        for i in range(0, len(df) - window_size + 1, stride):
+        for i in tqdm(range(0, len(df) - window_size + 1, stride), desc=f"Extracting windows from {timeframe}"):
             if max_windows and len(windows) >= max_windows:
                 break
                 
@@ -216,7 +218,7 @@ class PatternExtractor:
         grids = []
         pics = []
         
-        for window in windows:
+        for window in tqdm(windows, desc="Creating Template Grids"):
             # Extract close prices for the grid
             close_prices = window[:, 3]  # Close is at index 3 in OHLC
             
@@ -253,7 +255,7 @@ class PatternExtractor:
         close_prices = [window[:, 3] for window in windows]
         
         # Calculate DTW distances
-        for i in range(n_windows):
+        for i in tqdm(range(n_windows), desc="Calculating DTW distances"):
             for j in range(i+1, n_windows):
                 distance = dtw(close_prices[i], close_prices[j])
                 distance_matrix[i, j] = distance
@@ -276,7 +278,7 @@ class PatternExtractor:
         
         logger.info(f"Calculating PIC similarity matrix for {n_pics} patterns")
         
-        for i in range(n_pics):
+        for i in tqdm(range(n_pics), desc="Calculating PIC similarities"):
             for j in range(i, n_pics):
                 # Calculate similarity as 1 - normalized Euclidean distance
                 distance = np.sqrt(np.sum((np.array(pics[i]) - np.array(pics[j]))**2))
@@ -455,7 +457,7 @@ class PatternExtractor:
         Returns:
             str: Path to saved patterns file
         """
-        patterns_dir = os.path.join(self.output_dir, 'data')
+        atterns_dir = os.path.dirname(os.path.dirname(os.path.join(current_app.config['PATTERNS_FOLDER'], 'data')))
         os.makedirs(patterns_dir, exist_ok=True)
         
         # Convert timestamps to strings for JSON serialization
@@ -753,28 +755,29 @@ class PiecewiseLinearRegression:
         
         # Plot original data
         ax.scatter(x, y, s=10, alpha=0.5, label='Original data')
-        
+
         # Plot segments
         for segment in self.segments:
             start_idx = segment['start']
             end_idx = segment['end']
             segment_x = x[start_idx:end_idx+1]
             predicted = segment['slope'] * segment_x + segment['intercept']
-            
-            ax.plot(segment_x, predicted, linewidth=2, 
+
+            ax.plot(segment_x, predicted, linewidth=2,
                    label=f"Segment {start_idx}-{end_idx} (slope: {segment['slope']:.4f})")
-        
+
         if title:
             ax.set_title(title)
-            
+
         ax.set_xlabel('Time')
         ax.set_ylabel('Price')
         ax.legend()
         ax.grid(True, alpha=0.3)
-        
+
         if save_path:
             plt.savefig(save_path, bbox_inches='tight')
-            
+            plt.close(fig)
+
         return fig
 
 

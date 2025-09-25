@@ -10,6 +10,7 @@ from datetime import datetime
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import MinMaxScaler
 import logging
+from tqdm import tqdm
 
 # Configure logging
 logging.basicConfig(
@@ -87,14 +88,15 @@ class ForexDataPreprocessor:
             
             # Convert date column to datetime
             logger.info(f"Converting date format for {tf} data")
-            try:
-                df['Date'] = pd.to_datetime(df['Date'], format='%Y.%m.%d %H:%M')
-            except Exception as e:
-                logger.warning(f"Error converting dates: {e}. Trying alternative format.")
+            for i in tqdm(range(len(df)), desc=f"Converting dates for {tf}"):
                 try:
-                    df['Date'] = pd.to_datetime(df['Date'])
+                    df.iloc[i, df.columns.get_loc('Date')] = pd.to_datetime(df.iloc[i, df.columns.get_loc('Date')], format='%Y.%m.%d %H:%M')
                 except Exception as e:
-                    logger.error(f"Failed to convert dates: {e}")
+                    logger.warning(f"Error converting date at index {i}: {e}. Trying alternative format.")
+                    try:
+                        df.iloc[i, df.columns.get_loc('Date')] = pd.to_datetime(df.iloc[i, df.columns.get_loc('Date')])
+                    except Exception as e:
+                        logger.error(f"Failed to convert date at index {i}: {e}")
             
             # Set Date as index
             df.set_index('Date', inplace=True)
@@ -217,7 +219,7 @@ class ForexDataPreprocessor:
             
             # Calculate rolling statistics
             window_sizes = [5, 10, 20]
-            for window in window_sizes:
+            for window in tqdm(window_sizes, desc=f"Calculating rolling statistics for {tf}"):
                 # Moving averages
                 df[f'ma_{window}'] = df['Close'].rolling(window=window).mean()
                 # Volatility (standard deviation)
@@ -227,13 +229,14 @@ class ForexDataPreprocessor:
             
             # Calculate technical indicators
             # RSI (Relative Strength Index)
+            logger.info(f"Calculating RSI for {tf} data")
             delta = df['Close'].diff()
             gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
             loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
-            rs = gain / loss
             df['rsi_14'] = 100 - (100 / (1 + rs))
             
             # MACD (Moving Average Convergence Divergence)
+            logger.info(f"Calculating MACD for {tf} data")
             ema_12 = df['Close'].ewm(span=12, adjust=False).mean()
             ema_26 = df['Close'].ewm(span=26, adjust=False).mean()
             df['macd'] = ema_12 - ema_26
@@ -241,6 +244,7 @@ class ForexDataPreprocessor:
             df['macd_hist'] = df['macd'] - df['macd_signal']
             
             # ATR (Average True Range)
+            logger.info(f"Calculating ATR for {tf} data")
             tr1 = df['High'] - df['Low']
             tr2 = abs(df['High'] - df['Close'].shift())
             tr3 = abs(df['Low'] - df['Close'].shift())
@@ -290,7 +294,7 @@ class ForexDataPreprocessor:
         X = []
         timestamps = []
         
-        for i in range(len(df) - window_size + 1):
+        for i in tqdm(range(len(df) - window_size + 1), desc=f"Creating sliding windows for {timeframe}"):
             window = df.iloc[i:i+window_size][available_features].values
             X.append(window)
             timestamps.append(df.index[i+window_size-1])
@@ -360,7 +364,7 @@ class ForexDataPreprocessor:
         plt.title(f'XAUUSD {timeframe} Candlestick Chart')
         
         # Plot candlesticks
-        for i in range(len(df)):
+        for i in tqdm(range(len(df)), desc=f"Plotting candlesticks for {timeframe}"):
             # Get the data point
             date = df.index[i]
             op, high, low, close = df.iloc[i][['Open', 'High', 'Low', 'Close']]
