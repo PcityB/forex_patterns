@@ -51,6 +51,17 @@ def make_json_serializable(obj):
     else:
         return obj
 
+def restore_json_infinity(obj):
+    """Convert JSON 'inf' and '-inf' strings back to float infinity"""
+    if isinstance(obj, dict):
+        return {k: restore_json_infinity(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [restore_json_infinity(i) for i in obj]
+    elif obj == "inf":
+        return float('inf')
+    elif obj == "-inf":
+        return -float('inf')
+    return obj
 
 class PatternAnalyzer:
     """
@@ -96,7 +107,8 @@ class PatternAnalyzer:
         
         # Load pattern metadata
         with open(patterns_file, 'r') as f:
-            patterns_meta = json.load(f)
+            patterns_meta = restore_json_infinity(json.load(f))
+
             
         # Load full pattern data
         with open(full_patterns_file, 'rb') as f:

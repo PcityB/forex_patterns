@@ -35,8 +35,8 @@ class ForexDataPreprocessor:
         self.raw_data = {}
         self.processed_data = {}
         self.scalers = {}
-        
-    def load_data(self, filename):
+
+    def load_data(self, filename, delimiter=None):
         """
         Load a single data file directly by filename.
         
@@ -46,12 +46,15 @@ class ForexDataPreprocessor:
         Returns:
             dict: Dictionary with a single loaded dataframe keyed by timeframe extracted from filename.
         """
-        logger.info(f"Loading data file {filename} from {self.data_dir}")
+        if delimiter is None:
+            # Use your existing detection logic or default semicolon
+            delimiter = ';'  # Your current default
         
+        logger.info(f"Loading data file {filename} with delimiter '{delimiter}'")
         file_path = os.path.join(self.data_dir, filename)
         try:
             # Load data with semicolon delimiter
-            df = pd.read_csv(file_path, delimiter=';')
+            df = pd.read_csv(file_path, delimiter=delimiter)
             # Extract timeframe from filename, assuming format like XAU_{timeframe}_data.csv
             if filename.startswith("XAU_") and filename.endswith("_data.csv"):
                 tf = filename.replace("XAU_", "").replace("_data.csv", "")
@@ -226,15 +229,23 @@ class ForexDataPreprocessor:
                 df[f'volatility_{window}'] = df['Close'].rolling(window=window).std()
                 # Price range
                 df[f'range_{window}'] = df['High'].rolling(window=window).max() - df['Low'].rolling(window=window).min()
-            
-            # Calculate technical indicators
-            # RSI (Relative Strength Index)
+                    
+            # Calculate RSI (Relative Strength Index)
             logger.info(f"Calculating RSI for {tf} data")
             delta = df['Close'].diff()
-            gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+            gain = delta.where(delta > 0, 0).rolling(window=14).mean()
             loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+
+            # Calculate Relative Strength (RS)
+            rs = gain / loss
+
+            # Calculate RSI using the standard formula
             df['rsi_14'] = 100 - (100 / (1 + rs))
-            
+
+            # Handle division by zero cases (when loss is 0)
+            df['rsi_14'] = df['rsi_14'].fillna(100)  # RSI = 100 when no losses
+
+            # MACD (Moving Average Convergence Divergence
             # MACD (Moving Average Convergence Divergence)
             logger.info(f"Calculating MACD for {tf} data")
             ema_12 = df['Close'].ewm(span=12, adjust=False).mean()
